@@ -1,0 +1,3 @@
+gas,crit_temp(K),crit_pres(Pa),crit_den(mol/dm3),molar_mass_amu,T_ref_K,ref_enth,ref_ent
+Helium,5.1953,0.22746e6,17.3887,4.00206,100.0,2.5,12.4284
+Nitrogen,126.192,3.3958e6,11.1839,28.01348,298.15,8670,191.5
