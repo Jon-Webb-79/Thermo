@@ -155,6 +155,37 @@ class Helmholtz:
                      self.helm_coefs['a7'] * self.helm_coefs['a8'] * \
                      tau * (1 / (np.exp(self.helm_coefs['a8'] * tau)) - 1.0)
         return derivative
+# ----------------------------------------------------------------------------
+
+    def first_alpha_tau_one_partial(self, density: float, temperature: float) -> float:
+        """
+
+        :param density: The density in units of moles per cubic decimeter
+        :param temperature: The temperature in units of Kelvins
+        :return derivative: The first derivative of alpha one with respect
+                            to tau
+
+        This function determines the first derivative of alpha one with
+        respect to tau as outlined in Eq. 84 or Ref. 1.
+        """
+        delta = density / self.critical_density
+        tau = self.critical_temperature / temperature
+        sum1 = (self.nk[:self.upper1] * delta ** self.dk[:self.upper1] *
+                tau ** self.tk[:self.upper1] * self.tk[:self.upper1]).sum()
+
+        sum2 = (self.nk[self.upper1:self.upper2] *
+                delta ** self.dk[self.upper1:self.upper2] *
+                tau ** self.tk[self.upper1:self.upper2] *
+                np.exp(-delta ** self.lk[self.upper1:self.upper2]) *
+                self.tk[self.upper1:self.upper2]).sum()
+
+        sum3 = (self.nk[self.upper2] * delta ** self.dk[self.upper2] *
+                tau ** self.tk[self.upper2] * self.tk[self.upper2] *
+                np.exp(-self.etak[self.upper2] * (delta - self.epsk[self.upper2]) ** 2.0 -
+                       self.betak[self.upper2] * (tau - self.gammak[self.upper2]) ** 2.0)
+                *(self.tk[self.upper2] - 2.0 * self.betak[self.upper2] * tau *
+                  (tau - self.gammak[self.upper2]))).sum()
+        return sum1 + sum2 + sum3
 # ============================================================================
 # ============================================================================
 # eof
