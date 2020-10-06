@@ -179,12 +179,12 @@ class Helmholtz:
                 np.exp(-delta ** self.lk[self.upper1:self.upper2]) *
                 self.tk[self.upper1:self.upper2]).sum()
 
-        sum3 = (self.nk[self.upper2] * delta ** self.dk[self.upper2] *
-                tau ** self.tk[self.upper2] * self.tk[self.upper2] *
-                np.exp(-self.etak[self.upper2] * (delta - self.epsk[self.upper2]) ** 2.0 -
-                       self.betak[self.upper2] * (tau - self.gammak[self.upper2]) ** 2.0)
-                *(self.tk[self.upper2] - 2.0 * self.betak[self.upper2] * tau *
-                  (tau - self.gammak[self.upper2]))).sum()
+        sum3 = (self.nk[self.upper2:self.upper3] * delta ** self.dk[self.upper2:self.upper3] *
+                tau ** self.tk[self.upper2:self.upper3] * self.tk[self.upper2:self.upper3] *
+                np.exp(-self.etak[self.upper2:self.upper3] * (delta - self.epsk[self.upper2:self.upper3]) ** 2.0 -
+                       self.betak[self.upper2:self.upper3] * (tau - self.gammak[self.upper2:self.upper3]) ** 2.0)
+                *(self.tk[self.upper2:self.upper3] - 2.0 * self.betak[self.upper2:self.upper3] * tau *
+                  (tau - self.gammak[self.upper2:self.upper3]))).sum()
         return sum1 + sum2 + sum3
 # ----------------------------------------------------------------------------
 
@@ -206,6 +206,43 @@ class Helmholtz:
                      tau ** 2.0 * (np.exp(self.helm_coefs['a8'] *
                      tau / (np.exp(self.helm_coefs['a8'] * tau) - 1.0) ** 2.0))
         return derivative
+# ----------------------------------------------------------------------------
+
+    def second_alpha_tau_one_partial(self, density: float, temperature: float) -> float:
+        """
+
+        :param density: The density in units of moles per cubic decimeter
+        :param temperature: The temperature in units of Kelvins
+        :return derivative: The second partial of alpha one with respect
+                            to tau
+
+        This function determines the value of the second derivative of alpha
+        one with respect to tau according to Eq. 85 of Ref. 1.
+        """
+        delta = density / self.critical_density
+        tau = self.critical_temperature / temperature
+        sum1 = (self.nk[:self.upper1] * delta ** self.dk[:self.upper1] *
+               tau ** self.tk[:self.upper1] * (self.tk[:self.upper1] *
+               (self.tk[:self.upper1] - 1.0))).sum()
+
+        sum2 = (self.nk[self.upper1:self.upper2] *
+                delta ** self.dk[self.upper1:self.upper2] *
+                tau ** self.tk[self.upper1:self.upper2] *
+                np.exp(-delta * self.lk[self.upper1:self.upper2]) *
+                (self.tk[self.upper1:self.upper2]) *
+                (self.tk[self.upper1:self.upper2]) - 1.0).sum()
+
+        sum3 = (self.nk[self.upper2:self.upper3] * delta ** self.dk[self.upper2:self.upper3] * \
+               tau ** self.tk[self.upper2:self.upper3] * \
+               np.exp(-self.etak[self.upper2:self.upper3] *
+               (delta - self.epsk[self.upper2:self.upper3]) ** 2.0 -
+               self.betak[self.upper2:self.upper3] *
+               (tau - self.gammak[self.upper2:self.upper3]) ** 2.0) * \
+               ((self.tk[self.upper2:self.upper3] - 2.0 * self.betak[self.upper2:self.upper3] *
+               tau * (tau - self.gammak[self.upper2:self.upper3]) ** 2.0) -
+                self.tk[self.upper2:self.upper3] - 2.0 * self.betak[self.upper2:self.upper3] *
+                tau ** 2.0)).sum()
+        return sum1 + sum2 + sum3
 # ============================================================================
 # ============================================================================
 # eof
