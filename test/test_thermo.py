@@ -105,6 +105,16 @@ def test_first_alpha_tau_two_partial():
     """
     alpha_tau = helm.first_alpha_tau_one_partial(density, temperature)
     assert isclose(alpha_tau, -0.13262, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_second_alpha_tau_zero_partial():
+    """
+
+    This function tests the second_alpha_tau_zero_partial() function
+    """
+    alpha_tau = helm.second_alpha_tau_zero_partial(temperature)
+    assert isclose(alpha_tau, -96.197, rel_tol=1.0e-3)
 # ==============================================================================
 # ==============================================================================
 # eof

@@ -186,6 +186,26 @@ class Helmholtz:
                 *(self.tk[self.upper2] - 2.0 * self.betak[self.upper2] * tau *
                   (tau - self.gammak[self.upper2]))).sum()
         return sum1 + sum2 + sum3
+# ----------------------------------------------------------------------------
+
+    def second_alpha_tau_zero_partial(self, temperature: float) -> float:
+        """
+
+        :param temperature: The static temperature in units of Kelvins
+        :return derivative: The second partial derivative of alpha zero
+                            with respect to tau
+
+        This function determines the seconc partial derivative of alpha
+        zero with respect to tau in accordance with Eq. 80 of Ref. 1.
+        """
+        tau = self.critical_temperature / temperature
+        derivative = self.helm_coefs['a1'] + 2.0 * (self.helm_coefs['a4'] / tau) + \
+                     6.0 * (self.helm_coefs['a5'] / tau ** 2.0) + \
+                     12.0 * (self.helm_coefs['a6'] / tau ** 3.0) - \
+                     self.helm_coefs['a7'] * self.helm_coefs['a8'] ** 2.0 * \
+                     tau ** 2.0 * (np.exp(self.helm_coefs['a8'] *
+                     tau / (np.exp(self.helm_coefs['a8'] * tau) - 1.0) ** 2.0))
+        return derivative
 # ============================================================================
 # ============================================================================
 # eof
