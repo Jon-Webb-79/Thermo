@@ -56,8 +56,25 @@ epsk = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
+
+ideal_coefs = {'a1': 2.5, 'a2': -12.76952708, 'a3': -0.00784163,
+               'a4': -0.0001934819, 'a5': -0.00001247742,
+               'a6': 0.00000006678326, 'a7': 1.012941,
+               'a8': 26.65788}
+temperature = 340.8
+density = 2.7843
 helm = Helmholtz(critical_dens, critical_temp, tk, nk, dk, lk,
-                 etak, epsk, betak, gammak, 6, 32, 36)
+                 etak, epsk, betak, gammak, 6, 32, 36, ideal_coefs)
+
+
+def test_helmholtz_energy():
+    """
+
+    This function tests the helmholtz energy function
+    """
+    energy = helm.helmholtz_energy(density, temperature)
+    assert isclose(energy, -15.634, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
 
 
 def test_first_alpha_delta_partial():
@@ -66,8 +83,18 @@ def test_first_alpha_delta_partial():
     Test the first_alpha_delta_partial() function to the criteria
     on page 1423
     """
-    alpha_delta = helm.first_alpha_delta_partial(2.7843, 340.0)
-    assert isclose(alpha_delta, 0.01638, rel_tol=1.0e-3)
+    alpha_delta = helm.first_alpha_delta_partial(density, temperature)
+    assert isclose(alpha_delta, 0.01669, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_first_alpha_tau_one_partial():
+    """
+
+    This function tests the first_alpha_zero_tau_partial() function
+    """
+    alpha_tau = helm.first_alpha_tau_zero_partial(temperature)
+    assert isclose(alpha_tau, -7.50035, rel_tol=1.0e-3)
 # ==============================================================================
 # ==============================================================================
 # eof
