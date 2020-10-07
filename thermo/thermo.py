@@ -2,6 +2,7 @@
 import numpy as np
 from typing import Dict
 import sys
+from scipy.optimize import bisect
 # ============================================================================
 # ============================================================================
 # Date:    October 4, 2020
@@ -449,9 +450,41 @@ class ThermoProps(Helmholtz):
         temperature = self._bisect_temp(0.0, 1e5, density, pressure, tol,
                                         max_num)
         return temperature
-# ============================================================================
+# ----------------------------------------------------------------------------
 
-    def _bisect_temp(self, low: float, high, dens: float, pres: float,
+    def density(self, pressure: float, temperature: float, max_num: int = 400,
+                    tol: float = 1.0e-4):
+        """
+
+        :param pressure: The static pressure in units of Pascals
+        :param temperature: The static Temperature in units of Kelvins
+        :param max_num: The maximum number of iterations in the solver
+                        before failure is declared.  Defaulted to 400
+        :param tol: The tolerance in the acceptable solution.  Defaulted
+                    to 1.0e-4
+        :return density: The density in units of grams per cubic centimeter
+
+        This function solves for the density with knowledge of
+        temperature and pressure using hte relationship below,
+        which was derived from Eq. 76 on page 65 of Ref. 2.
+
+        .. math::
+           P = \\rho R T\\left[1 + \delta \\left(\\frac{\partial
+           \\alpha^r}{\partial \delta} \\right)_{\\tau} \\right]
+
+        where;
+
+        .. math::
+           Z = 1 + \delta \\left(\\frac{\partial \\alpha^r}{\partial \delta} \\right)_{\\tau}
+        """
+        density = self._bisect_dens(1e-6, 10000.0, temperature, pressure, tol,
+                                    max_num)
+        print(density)
+        return density
+# ============================================================================
+# Private functions
+
+    def _bisect_temp(self, low: float, high: float, dens: float, pres: float,
                      tol: float = 1.0e-3, max_num: int = 400):
         """
 
@@ -476,6 +509,35 @@ class ThermoProps(Helmholtz):
             else:
                 return start
         message = 'FATAL ERROR: _bisect_temp function reached maximum iterations of '
+        message += str(max_num)
+        sys.exit(message)
+# ----------------------------------------------------------------------------
+
+    def _bisect_dens(self, low: float, high: float, temp: float, pres: float,
+                     tol: float = 1.0e-3, max_num: int = 400):
+        """
+
+        :param low: The low value for the solution
+        :param high: The upper value for the solution
+        :param temp: The temperature in units of Kelvins
+        :param pres: The pressure in units of Pascals
+        :param tol: The tolerance for the solution
+        :param max_num: The maximum number of iterations
+        :return:
+        """
+        upper = pres + pres * tol
+        lower = pres - pres * tol
+        for i in range(max_num):
+            # define window
+            start = low + (high-low) / 2.0
+            res = self.pressure(start, temp)
+            if res > upper:
+                high = start
+            elif res < lower:
+                low = start
+            else:
+                return start
+        message = 'FATAL ERROR: _bisect_dens function reached maximum iterations of '
         message += str(max_num)
         sys.exit(message)
 # ============================================================================

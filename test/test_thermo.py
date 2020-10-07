@@ -175,6 +175,18 @@ def test_temperature():
     dens = 0.07796151  # corresponds to 2.783 moles/dm3 as used in Ref. 2.
     press = therm.temperature(dens, 8017385.0)
     assert isclose(press, 340.7, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_density():
+    """
+
+    This function tests the pressure() function
+    """
+    pressure = 8017385.0
+    temp = 340.0
+    dens = therm.density(pressure, temp, 400, 1.0e-5)
+    assert isclose(dens, 0.0781634, rel_tol=1.0e-3)
 # ==============================================================================
 # ==============================================================================
 # eof
