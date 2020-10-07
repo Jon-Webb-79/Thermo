@@ -12,6 +12,7 @@ Welcome to Thermo's documentation!
 
    Introduction
    Helmholtz
+   thermo_props
 
 
 

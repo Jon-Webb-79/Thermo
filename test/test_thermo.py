@@ -1,5 +1,5 @@
 # Import modules here
-from thermo.thermo import Helmholtz
+from thermo.thermo import Helmholtz, ThermoProps
 
 from math import isclose
 import numpy as np
@@ -145,6 +145,36 @@ def test_second_alpha_delta_tau_partial():
     """
     alpha_delta_tau = helm.second_alpha_tau_delta_partial(density, temperature)
     assert isclose(alpha_delta_tau, -0.13103, rel_tol=1.0e-3)
+# ==============================================================================
+# ==============================================================================
+# Test ThermoProps class
+
+
+therm = ThermoProps(critical_dens, critical_temp, tk, nk,
+                    dk, lk, etak, epsk, betak, gammak, 6,
+                    32, 36, ideal_coefs, 28.01348)
+
+
+def test_pressure():
+    """
+
+    This function tests the pressure() function against diatomic
+    nitrogen inputs
+    """
+    dens = 0.07796151  # corresponds to 2.783 moles/dm3 as used in Ref. 2.
+    pressure = therm.pressure(dens, temperature)
+    assert isclose(pressure, 8017385.0, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_temperature():
+    """
+
+    This function tests the temperature() function
+    """
+    dens = 0.07796151  # corresponds to 2.783 moles/dm3 as used in Ref. 2.
+    press = therm.temperature(dens, 8017385.0)
+    assert isclose(press, 340.7, rel_tol=1.0e-3)
 # ==============================================================================
 # ==============================================================================
 # eof

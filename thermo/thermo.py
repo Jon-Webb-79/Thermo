@@ -1,6 +1,7 @@
 # Import necessary packages here
 import numpy as np
 from typing import Dict
+import sys
 # ============================================================================
 # ============================================================================
 # Date:    October 4, 2020
@@ -323,6 +324,160 @@ class Helmholtz:
                   delta * (delta - self.epsk[self.upper2:])) * (self.tk[self.upper2:] -
                   2.0 * self.betak[self.upper2:] * tau * (tau - self.gammak[self.upper2:])))).sum()
         return sum1 + sum2 + sum3
+# ============================================================================
+# ============================================================================
+
+
+class ThermoProps(Helmholtz):
+    """
+    This class determines thermodynamic properties of gasses using
+    the Helmholtz energy formulations.  All equations
+    are derived from the following references
+
+    1. R. Span, E. W. Lemmon, R. T. Jacobson, W. Wagner, and A. Yokozeki,
+    "A Reference Equation of State for the Thermodynamic Properties
+    of Nitrogen for Temperatures from 63.151 to 1000 K and Pressures
+    to 2200 MPa", J. Phy. Chem. Ref. Data 29, 1361 (2000)
+
+    2. D. O. Vega, "A New Wide Range Equation of State for Helium-4",
+    Ph.D. Dissertation, Texas A&M University, August 2013
+    """
+    def __init__(self, critical_density: float, critical_temperature: float,
+                 tk: np.array, nk: np.array, dk: np.array, lk: np.array,
+                 etak: np.array, epsk: np.array, betak: np.array,
+                 gammak: np.array, upper1: int, upper2: int, upper3: int,
+                 helm_coefs: Dict[str, float], molar_mass: float):
+        """
+
+        :param critical_density: The density associated with the critical point
+                                 in units of moles per cubic decimeter
+        :param critical_temperature: The temperature associated with the critical
+                                     point in units of Kelvins
+        :param tk: fitting coefficients
+        :param nk: fitting coefficeints
+        :param dk: fitting coefficeints
+        :param lk: fitting coefficients
+        :param etak: fitting coefficients
+        :param epsk: fitting coefficients
+        :param betak: fitting coefficients
+        :param gammak: fitting coefficients
+        :param upper1: The limits of the first summation
+        :param upper2: The limits of the second summation
+        :param upper3: The limits of the third summation
+        :param helm_coefs: The Helmholtz coefficients as a
+                           dictionary with the following keys,
+                           `a1`, `a1`, `a3`, `a4`, `a5`, `a6`,
+                           `a7`, and `a8`
+        :param molar_mass: The molar mass of the fluid in units of
+                           grams per mole
+        """
+        self.critical_temperature = critical_temperature
+        self.critical_density = critical_density
+        self.tk = tk
+        self.nk = nk
+        self.dk = dk
+        self.lk = lk
+        self.etak = etak
+        self.epsk = epsk
+        self.betak = betak
+        self.gammak = gammak
+        self.upper1 = upper1
+        self.upper2 = upper2
+        self.upper3 = upper3
+        self.helm_coefs = helm_coefs
+        self.molar_mass = molar_mass
+        self.gas_constant = 8.314462618  # J/K-mol
+        Helmholtz.__init__(self, critical_density, critical_temperature,
+                           tk, nk, dk, lk, etak, epsk, betak, gammak, upper1,
+                           upper2, upper3, helm_coefs)
+# ----------------------------------------------------------------------------
+
+    def pressure(self, density: float, temperature: float) -> float:
+        """
+
+        :param density: Density in units of grams per cubic centimeter
+        :param temperature: The static density in units of Kelvins
+        :return pressure: The static pressure in units of Pascals
+
+        This function solves for the pressure with knowledge of
+        density and temperature using hte relationship below,
+        which was derived from Eq. 76 on page 65 of Ref. 2.
+
+        .. math::
+           P = \\rho R T\\left[1 + \delta \\left(\\frac{\partial
+           \\alpha^r}{\partial \delta} \\right)_{\\tau} \\right]
+
+        where;
+
+        .. math::
+           Z = 1 + \delta \\left(\\frac{\partial \\alpha^r}{\partial \delta} \\right)_{\\tau}
+        """
+        # Convert density from g/cc to moles/dm^3
+        molar_density = density * 1000.0 / self.molar_mass
+        z = 1.0 + self.first_alpha_delta_partial(molar_density, temperature)
+        # multiply by 1000 to convert density from dm^-3 to m^-3
+        pressure = 1000.0 * z * self.gas_constant * temperature * molar_density
+        return pressure
+# ----------------------------------------------------------------------------
+
+    def temperature(self, density: float, pressure: float, max_num: int = 400,
+                    tol: float = 1.0e-4):
+        """
+
+        :param density: Density in units of grams per cubic centimeter
+        :param pressure: The static pressure in units of Pascals
+        :param max_num: The maximum number of iterations in the solver
+                        before failure is declared.  Defaulted to 400
+        :param tol: The tolerance in the acceptable solution.  Defaulted
+                    to 1.0e-4
+        :return temperature: The static temperature in units of Kelvins
+
+        This function solves for the temperature with knowledge of
+        density and pressure using hte relationship below,
+        which was derived from Eq. 76 on page 65 of Ref. 2.
+
+        .. math::
+           P = \\rho R T\\left[1 + \delta \\left(\\frac{\partial
+           \\alpha^r}{\partial \delta} \\right)_{\\tau} \\right]
+
+        where;
+
+        .. math::
+           Z = 1 + \delta \\left(\\frac{\partial \\alpha^r}{\partial \delta} \\right)_{\\tau}
+        """
+        # Convert density from g/cc to moles/dm^3
+        temperature = self._bisect_temp(0.0, 1e5, density, pressure, tol,
+                                        max_num)
+        return temperature
+# ============================================================================
+
+    def _bisect_temp(self, low: float, high, dens: float, pres: float,
+                     tol: float = 1.0e-3, max_num: int = 400):
+        """
+
+        :param low: The low value for the solution
+        :param high: The upper value for the solution
+        :param dens: The density in g/cc
+        :param pres: The pressure in units of Pascals
+        :param tol: The tolerance for the solution
+        :param max_num: The maximum number of iterations
+        :return:
+        """
+        upper = pres + pres * tol
+        lower = pres - pres * tol
+        for i in range(max_num):
+            # define window
+            start = low + (high-low) / 2.0
+            res = self.pressure(dens, start)
+            if res > upper:
+                high = start
+            elif res < lower:
+                low = start
+            else:
+                return start
+        message = 'FATAL ERROR: _bisect_temp function reached maximum iterations of '
+        message += str(max_num)
+        sys.exit(message)
 # ============================================================================
 # ============================================================================
 # eof
