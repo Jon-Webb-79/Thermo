@@ -58,8 +58,8 @@ epsk = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                  0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
 
 ideal_coefs = {'a1': 2.5, 'a2': -12.76952708, 'a3': -0.00784163,
-               'a4': -0.0001934819, 'a5': -0.00001247742,
-               'a6': 0.00000006678326, 'a7': 1.012941,
+               'a4': -1.934819e-4, 'a5': -1.247742e-5,
+               'a6': 6.678326e-8, 'a7': 1.012941,
                'a8': 26.65788}
 temperature = 340.8
 density = 2.7843
@@ -94,7 +94,7 @@ def test_first_alpha_tau_one_partial():
     This function tests the first_alpha_zero_tau_partial() function
     """
     alpha_tau = helm.first_alpha_tau_zero_partial(temperature)
-    assert isclose(alpha_tau, -7.50035, rel_tol=1.0e-3)
+    assert isclose(alpha_tau, 2.4983, rel_tol=1.0e-3)
 # ------------------------------------------------------------------------------
 
 
@@ -187,6 +187,30 @@ def test_density():
     temp = 340.0
     dens = therm.density(pressure, temp, 400, 1.0e-5)
     assert isclose(dens, 0.0781634, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_compressibility_factor():
+    """
+
+    This function tests the compressibility_factor() function
+    """
+    pressure = 8017385.0
+    temp = 340.0
+    z = therm.compressibility_factor(pressure, temp)
+    assert isclose(1.01644, z, rel_tol=1.0e-3)
+# ------------------------------------------------------------------------------
+
+
+def test_internal_energy():
+    """
+
+    This function tests the internal_energy() function
+    """
+    pressure = 8017385.0
+    temp = 340.0
+    u = therm.internal_energy(pressure, temp)
+    assert isclose(u, 0.23865, rel_tol=1.0e-3)
 # ==============================================================================
 # ==============================================================================
 # eof

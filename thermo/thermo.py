@@ -110,7 +110,10 @@ class Helmholtz:
 
         This function solves for the residual Helmholtz energy resulting
         from the first partial of alpha with respect to delta as shown on
-        page 1386 or Ref. 1
+        below and page 1386 or Ref. 1
+
+        .. math::
+           \\delta\\left(\\frac{\partial\\alpha^r}{\partial\\delta} \\right)_{\\tau}
         """
         delta = density / self.critical_density
         tau = self.critical_temperature / temperature
@@ -147,16 +150,20 @@ class Helmholtz:
 
         This function determines the first partial derivative of
         alpha zero with respect to tau in accordance with Eq. 79
-        of Ref. 1.
+        of Ref. 1. as shown below
+
+        .. math::
+           \\tau\\left(\\frac{\partial\\alpha^o}{\partial\\tau} \\right)_{\\delta}
         """
         tau = self.critical_temperature / temperature
-        derivative = self.helm_coefs['a1'] + self.helm_coefs['a3'] * tau - \
-                     (self.helm_coefs['a4'] / tau) - \
-                     2.0 * (self.helm_coefs['a5'] / tau ** 2.0) - \
-                     3.0 * (self.helm_coefs['a6'] / tau ** 3.0) + \
-                     self.helm_coefs['a7'] * self.helm_coefs['a8'] * \
-                     tau * (1 / (np.exp(self.helm_coefs['a8'] * tau)) - 1.0)
-        return derivative
+
+        der = self.helm_coefs['a1'] + self.helm_coefs['a3'] * tau - \
+            self.helm_coefs['a4'] * tau ** -1.0 - \
+            2.0 * self.helm_coefs['a5'] * tau ** -2.0 - \
+            3.0 * self.helm_coefs['a6'] * tau ** -3.0 + \
+            (self.helm_coefs['a7'] * self.helm_coefs['a8'] *
+             tau * (1/ (np.exp(self.helm_coefs['a8'] * tau) - 1.0)))
+        return der
 # ----------------------------------------------------------------------------
 
     def first_alpha_tau_one_partial(self, density: float, temperature: float) -> float:
@@ -168,10 +175,15 @@ class Helmholtz:
                             to tau
 
         This function determines the first derivative of alpha one with
-        respect to tau as outlined in Eq. 84 or Ref. 1.
+        respect to tau as outlined in Eq. 84 or Ref. 1. as shown below
+
+
+        .. math::
+           \\tau\\left(\\frac{\partial\\alpha^r}{\partial\\tau} \\right)_{\\delta}
         """
         delta = density / self.critical_density
         tau = self.critical_temperature / temperature
+
         sum1 = (self.nk[:self.upper1] * delta ** self.dk[:self.upper1] *
                 tau ** self.tk[:self.upper1] * self.tk[:self.upper1]).sum()
 
@@ -199,6 +211,10 @@ class Helmholtz:
 
         This function determines the seconc partial derivative of alpha
         zero with respect to tau in accordance with Eq. 80 of Ref. 1.
+        as shown below
+
+        .. math::
+           \\tau^2\\left(\\frac{\partial^2\\alpha^o}{\partial\\tau^2} \\right)_{\\delta}
         """
         tau = self.critical_temperature / temperature
         derivative = self.helm_coefs['a1'] + 2.0 * (self.helm_coefs['a4'] / tau) + \
@@ -219,7 +235,11 @@ class Helmholtz:
                             to tau
 
         This function determines the value of the second derivative of alpha
-        one with respect to tau according to Eq. 85 of Ref. 1.
+        one with respect to tau according to Eq. 85 of Ref. 1. as shown
+        below
+
+        .. math::
+           \\tau^2\\left(\\frac{\partial^2\\alpha^r}{\partial\\tau^2} \\right)_{\\delta}
         """
         delta = density / self.critical_density
         tau = self.critical_temperature / temperature
@@ -256,7 +276,10 @@ class Helmholtz:
                             to tau
 
         This function determines the value of the second derivative of alpha
-        one with respect to tau according to Eq. 82 of Ref. 1.
+        one with respect to tau according to Eq. 82 of Ref. 1. as shown below
+
+        .. math::
+           \\delta^2\\left(\\frac{\partial^2\\alpha^r}{\partial\\delta^2} \\right)_{\\tau}
         """
         delta = density / self.critical_density
         tau = self.critical_temperature / temperature
@@ -298,7 +321,10 @@ class Helmholtz:
                             to tau
 
         This function determines the value of the second derivative of alpha
-        one with respect to tau according to Eq. 86 of Ref. 1.
+        one with respect to tau according to Eq. 86 of Ref. 1. as shown below
+
+        .. math::
+           \\delta^2\\left(\\frac{\partial^2\\alpha^r}{\partial\\delta\partial\\tau} \\right)
         """
         delta = density / self.critical_density
         tau = self.critical_temperature / temperature
@@ -349,7 +375,6 @@ class ThermoProps(Helmholtz):
                  gammak: np.array, upper1: int, upper2: int, upper3: int,
                  helm_coefs: Dict[str, float], molar_mass: float):
         """
-
         :param critical_density: The density associated with the critical point
                                  in units of moles per cubic decimeter
         :param critical_temperature: The temperature associated with the critical
@@ -479,8 +504,36 @@ class ThermoProps(Helmholtz):
         """
         density = self._bisect_dens(1e-6, 10000.0, temperature, pressure, tol,
                                     max_num)
-        print(density)
         return density
+# ----------------------------------------------------------------------------
+
+    def compressibility_factor(self, pressure: float, temperature: float) -> float:
+        """
+
+        :param pressure: The static pressure in units of Pascals
+        :param temperature: The static temperature in units of Kelvins
+        :return z: The compressibility factor
+        """
+        density = self.density(pressure, temperature)
+        molar_density = density * 1000.0 / self.molar_mass
+        z = 1.0 + self.first_alpha_delta_partial(molar_density, temperature)
+        return z
+# ----------------------------------------------------------------------------
+
+    def internal_energy(self, pressure: float, temperature: float) -> float:
+        """
+
+        :param pressure: The static pressure in units of Pascals
+        :param temperature: The static temperature in units of Kelvins
+        :return u: The internal energy in units of J/kg
+        """
+        z = self.compressibility_factor(pressure, temperature)
+        density = self.density(pressure, temperature)
+        molar_density = density * 1000.0 / self.molar_mass
+        part1 = self.first_alpha_tau_zero_partial(temperature)
+        part2 = self.first_alpha_tau_one_partial(molar_density, temperature)
+        u = (part1 + part2) * self.gas_constant * temperature
+        return u / (1000.0 * self.molar_mass)
 # ============================================================================
 # Private functions
 
